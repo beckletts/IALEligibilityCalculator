@@ -2,6 +2,94 @@ import React, { useState } from "react";
 import Alert from "./Alert";
 import { subjects } from "./subjects"; // Move subject data to separate file
 
+const LockGroup = {
+  MATHEMATICS: "MATHEMATICS",
+  FURTHER_MATHEMATICS: "FURTHER_MATHEMATICS",
+  PURE_MATHEMATICS: "PURE_MATHEMATICS",
+};
+
+const isUnitPure = (unit) => {
+  return ["P1", "P2", "P3", "P4", "FP1", "FP2", "FP3"].includes(unit);
+};
+
+const getLockStatus = (unit, qualificationHistory) => {
+  if (isUnitPure(unit) && qualificationHistory.every((q) => q.level === "AS")) {
+    return null;
+  }
+
+  const latestIAL = qualificationHistory
+    .filter((q) => q.level === "A")
+    .sort((a, b) => b.date - a.date)[0];
+
+  if (!latestIAL) return null;
+
+  if (latestIAL.type === "PURE_MATHEMATICS" && isUnitPure(unit)) {
+    return LockGroup.PURE_MATHEMATICS;
+  }
+
+  if (latestIAL.type === "MATHEMATICS") {
+    return LockGroup.MATHEMATICS;
+  }
+
+  if (latestIAL.type === "FURTHER_MATHEMATICS") {
+    return LockGroup.FURTHER_MATHEMATICS;
+  }
+
+  return null;
+};
+
+const validateLocking = (subject, selectedUnits, qualificationHistory = []) => {
+  // Get lock status for all units
+  const unitLocks = selectedUnits.map((unit) => ({
+    unit,
+    lock: getLockStatus(unit, qualificationHistory),
+  }));
+
+  // Check for mixing locked units
+  const hasConflictingLocks = unitLocks.some(({ lock: lock1 }) =>
+    unitLocks.some(({ lock: lock2 }) => lock1 && lock2 && lock1 !== lock2)
+  );
+
+  if (hasConflictingLocks) {
+    throw new Error(
+      "Cannot mix units locked to different qualification groups"
+    );
+  }
+
+  // Validate Mathematics vs Pure Mathematics route
+  if (subject === "PURE_MATHEMATICS") {
+    const hasMathsLocked = unitLocks.some(
+      ({ lock }) => lock === LockGroup.MATHEMATICS
+    );
+    if (hasMathsLocked) {
+      throw new Error(
+        "Units locked to Mathematics cannot be used for Pure Mathematics"
+      );
+    }
+  }
+};
+
+const maximizeGrades = (selectedUnits, qualificationHistory) => {
+  if (qualificationHistory.length === 0) return null;
+
+  // For Mathematics and Further Mathematics route
+  if (
+    qualificationHistory.some(
+      (q) => q.type === "MATHEMATICS" || q.type === "FURTHER_MATHEMATICS"
+    )
+  ) {
+    return {
+      requiresRecertification: true,
+      recommendedUnits: {
+        mathematics: selectedUnits.slice(0, 6),
+        furtherMaths: selectedUnits.slice(6, 12),
+      },
+    };
+  }
+
+  return null;
+};
+
 const checkStandardEligibility = (criteria, selectedUnits) => {
   const result = { eligible: [], missing: [] };
 
@@ -210,8 +298,9 @@ export default function App() {
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [qualificationHistory, setQualificationHistory] = useState([]);
 
-  const validateInput = () => {
+  const validateInput = (subject, selectedUnits, qualificationHistory = []) => {
     if (!subject) {
       throw new Error("Please select a subject");
     }
@@ -226,14 +315,7 @@ export default function App() {
       );
     }
 
-    if (
-      ["MATHEMATICS", "FURTHER_MATHEMATICS", "PURE_MATHEMATICS"].includes(
-        subject
-      )
-    ) {
-      const validationError = validateMathsSubjects(subject, selectedUnits);
-      if (validationError) throw new Error(validationError);
-    }
+    validateLocking(subject, selectedUnits, qualificationHistory);
 
     const hasOnlineVariant = selectedUnits.some((unit) => unit.endsWith("C"));
     const hasOfflineVariant = selectedUnits.some(
@@ -250,7 +332,7 @@ export default function App() {
   const checkEligibility = () => {
     try {
       setError(null);
-      validateInput();
+      validateInput(subject, selectedUnits, qualificationHistory);
 
       const subjectData = subjects[subject];
       let eligibilityResult;
@@ -373,6 +455,68 @@ export default function App() {
                 ))}
               </div>
 
+              {subject && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-[#000000] mb-4">
+                    Previous Qualifications:
+                  </h3>
+                  <div className="space-y-3 bg-[#DFE1E1] p-4 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="reenter-ias"
+                        className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
+                        onChange={(e) => {
+                          const newHistory = e.target.checked
+                            ? [
+                                ...qualificationHistory,
+                                {
+                                  level: "AS",
+                                  type: subject,
+                                  date: new Date(),
+                                },
+                              ]
+                            : qualificationHistory.filter(
+                                (q) => q.level !== "AS"
+                              );
+                          setQualificationHistory(newHistory);
+                        }}
+                      />
+                      <label
+                        htmlFor="reenter-ias"
+                        className="text-sm text-[#000000] font-medium"
+                      >
+                        Re-enter IAS {subject.replace("_", " ")}
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        id="reenter-ial"
+                        className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
+                        onChange={(e) => {
+                          const newHistory = e.target.checked
+                            ? [
+                                ...qualificationHistory,
+                                { level: "A", type: subject, date: new Date() },
+                              ]
+                            : qualificationHistory.filter(
+                                (q) => q.level !== "A"
+                              );
+                          setQualificationHistory(newHistory);
+                        }}
+                      />
+                      <label
+                        htmlFor="reenter-ial"
+                        className="text-sm text-[#000000] font-medium"
+                      >
+                        Re-enter IAL {subject.replace("_", " ")}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <button
                 className="mt-6 px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
                 onClick={checkEligibility}
@@ -389,6 +533,45 @@ export default function App() {
                   <h4 className="font-semibold">
                     Eligible for: {result.eligible.join(" and ")} Level
                   </h4>
+                </div>
+              )}
+
+              {result && qualificationHistory.length > 0 && (
+                <div className="mt-4">
+                  <div className="p-4 bg-[#DFE1E1] border border-[#505759] rounded-lg">
+                    <h4 className="font-semibold mb-2">
+                      Re-certification Analysis
+                    </h4>
+                    {maximizeGrades(selectedUnits, qualificationHistory)
+                      ?.requiresRecertification ? (
+                      <>
+                        <p className="text-sm mb-2">
+                          Re-entering both qualifications may optimize your
+                          grades. Recommended unit allocation:
+                        </p>
+                        <div className="pl-4">
+                          <p className="text-sm">
+                            Mathematics:{" "}
+                            {maximizeGrades(
+                              selectedUnits,
+                              qualificationHistory
+                            )?.recommendedUnits?.mathematics?.join(", ")}
+                          </p>
+                          <p className="text-sm">
+                            Further Mathematics:{" "}
+                            {maximizeGrades(
+                              selectedUnits,
+                              qualificationHistory
+                            )?.recommendedUnits?.furtherMaths?.join(", ")}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm">
+                        No grade optimization opportunities found
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
