@@ -2,111 +2,11 @@ import React, { useState } from "react";
 import Alert from "./Alert";
 import { subjects } from "./subjects"; // Move subject data to separate file
 
-const LockGroup = {
-  MATHEMATICS: "MATHEMATICS",
-  FURTHER_MATHEMATICS: "FURTHER_MATHEMATICS",
-  PURE_MATHEMATICS: "PURE_MATHEMATICS",
-};
-
-const isUnitPure = (unit) => {
-  return ["P1", "P2", "P3", "P4", "FP1", "FP2", "FP3"].includes(unit);
-};
-
-const getLockStatus = (unit, qualificationHistory) => {
-  if (isUnitPure(unit) && qualificationHistory.every((q) => q.level === "AS")) {
-    return null;
-  }
-
-  const latestIAL = qualificationHistory
-    .filter((q) => q.level === "A")
-    .sort((a, b) => b.date - a.date)[0];
-
-  if (!latestIAL) return null;
-
-  if (latestIAL.type === "PURE_MATHEMATICS" && isUnitPure(unit)) {
-    return LockGroup.PURE_MATHEMATICS;
-  }
-
-  if (latestIAL.type === "MATHEMATICS") {
-    return LockGroup.MATHEMATICS;
-  }
-
-  if (latestIAL.type === "FURTHER_MATHEMATICS") {
-    return LockGroup.FURTHER_MATHEMATICS;
-  }
-
-  return null;
-};
-
-const validateLocking = (subject, selectedUnits, qualificationHistory = []) => {
-  // Get lock status for all units
-  const unitLocks = selectedUnits.map((unit) => ({
-    unit,
-    lock: getLockStatus(unit, qualificationHistory),
-  }));
-
-  // Check for mixing locked units
-  const hasConflictingLocks = unitLocks.some(({ lock: lock1 }) =>
-    unitLocks.some(({ lock: lock2 }) => lock1 && lock2 && lock1 !== lock2)
-  );
-
-  if (hasConflictingLocks) {
-    throw new Error(
-      "Cannot mix units locked to different qualification groups"
-    );
-  }
-
-  // Validate Mathematics vs Pure Mathematics route
-  if (subject === "PURE_MATHEMATICS") {
-    const hasMathsLocked = unitLocks.some(
-      ({ lock }) => lock === LockGroup.MATHEMATICS
-    );
-    if (hasMathsLocked) {
-      throw new Error(
-        "Units locked to Mathematics cannot be used for Pure Mathematics"
-      );
-    }
-  }
-};
-
-const maximizeGrades = (selectedUnits, qualificationHistory) => {
-  if (qualificationHistory.length === 0) return null;
-
-  // For Mathematics and Further Mathematics route
-  if (
-    qualificationHistory.some(
-      (q) => q.type === "MATHEMATICS" || q.type === "FURTHER_MATHEMATICS"
-    )
-  ) {
-    return {
-      requiresRecertification: true,
-      recommendedUnits: {
-        mathematics: selectedUnits.slice(0, 6),
-        furtherMaths: selectedUnits.slice(6, 12),
-      },
-    };
-  }
-
-  return null;
-};
 
 const checkStandardEligibility = (criteria, selectedUnits) => {
   const result = { eligible: [], missing: [] };
 
-  // Check AS Level if it exists
-  if (criteria.AS) {
-    const hasAllAS = criteria.AS.every((unit) => selectedUnits.includes(unit));
-    if (hasAllAS) {
-      result.eligible.push("AS");
-    } else {
-      result.missing.push({
-        level: "AS",
-        units: criteria.AS.filter((unit) => !selectedUnits.includes(unit)),
-      });
-    }
-  }
-
-  // Check A Level
+ // Check A Level
   const hasAllA = criteria.A.every((unit) => selectedUnits.includes(unit));
   if (hasAllA) {
     result.eligible.push("A");
@@ -174,133 +74,14 @@ const checkMathematicsEligibility = (criteria, selectedUnits) => {
   return result;
 };
 
-const checkPureMathsEligibility = (criteria, selectedUnits) => {
-  const result = { eligible: [], missing: [] };
 
-  // Check AS Level
-  const hasAllAS = criteria.AS.every((unit) => selectedUnits.includes(unit));
-  if (hasAllAS) {
-    result.eligible.push("AS");
-  } else {
-    result.missing.push({
-      level: "AS",
-      units: criteria.AS.filter((unit) => !selectedUnits.includes(unit)),
-    });
-  }
-
-  // Check A Level
-  const hasRequired = criteria.A.required.every((unit) =>
-    selectedUnits.includes(unit)
-  );
-  const hasOneOf = criteria.A.oneOf.some((unit) =>
-    selectedUnits.includes(unit)
-  );
-
-  if (hasRequired && hasOneOf) {
-    result.eligible.push("A");
-  } else {
-    const missing = [];
-    if (!hasRequired) {
-      missing.push(
-        ...criteria.A.required.filter((unit) => !selectedUnits.includes(unit))
-      );
-    }
-    if (!hasOneOf) {
-      missing.push(`One of: ${criteria.A.oneOf.join(", ")}`);
-    }
-    result.missing.push({ level: "A", units: missing });
-  }
-
-  return result;
-};
-
-const validateMathsSubjects = (subject, selectedUnits) => {
-  if (
-    subject === "MATHEMATICS" &&
-    selectedUnits.some((unit) => ["WFM01", "WFM02", "WFM03"].includes(unit))
-  ) {
-    return "Units cannot be used for both Mathematics and Pure Mathematics qualifications";
-  }
-  return null;
-};
-
-const checkFurtherMathsEligibility = (criteria, selectedUnits) => {
-  const result = { eligible: [], missing: [] };
-
-  // Check AS Level
-  const hasASCore = criteria.AS.required.every((unit) =>
-    selectedUnits.includes(unit)
-  );
-  const optionalUnitsCount = criteria.AS.twoFrom.filter((unit) =>
-    selectedUnits.includes(unit)
-  ).length;
-
-  if (hasASCore && optionalUnitsCount >= 2) {
-    result.eligible.push("AS");
-  } else {
-    const missing = [];
-    if (!hasASCore) {
-      missing.push(...criteria.AS.required);
-    }
-    if (optionalUnitsCount < 2) {
-      missing.push(
-        `Need ${2 - optionalUnitsCount} more from: ${criteria.AS.twoFrom.join(
-          ", "
-        )}`
-      );
-    }
-    result.missing.push({ level: "AS", units: missing });
-  }
-
-  // Check both A Level routes
-  const route1 = criteria.A.options[0];
-  const route2 = criteria.A.options[1];
-
-  // Route 1: FP1 + (FP2 or FP3) + 4 apps
-  const hasRoute1Core = route1.required.every((unit) =>
-    selectedUnits.includes(unit)
-  );
-  const hasRoute1Further = route1.oneFromFurther.some((unit) =>
-    selectedUnits.includes(unit)
-  );
-  const route1AppsCount = route1.fourFromApps.filter((unit) =>
-    selectedUnits.includes(unit)
-  ).length;
-
-  // Route 2: FP1 + FP2 + FP3 + 3 apps
-  const hasRoute2Core = route2.required.every((unit) =>
-    selectedUnits.includes(unit)
-  );
-  const route2AppsCount = route2.threeFromApps.filter((unit) =>
-    selectedUnits.includes(unit)
-  ).length;
-
-  if (
-    (hasRoute1Core && hasRoute1Further && route1AppsCount >= 4) ||
-    (hasRoute2Core && route2AppsCount >= 3)
-  ) {
-    result.eligible.push("A");
-  } else {
-    result.missing.push({
-      level: "A",
-      units: [
-        "Complete either:",
-        "Route 1: FP1 + (FP2 or FP3) + four application units",
-        "Route 2: FP1 + FP2 + FP3 + three application units",
-      ],
-    });
-  }
-
-  return result;
-};
 export default function App() {
   const [subject, setSubject] = useState("");
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
-  const [qualificationHistory, setQualificationHistory] = useState([]);
 
-  const validateInput = (subject, selectedUnits, qualificationHistory = []) => {
+ const validateInput = (subject, selectedUnits) => {
     if (!subject) {
       throw new Error("Please select a subject");
     }
@@ -308,14 +89,6 @@ export default function App() {
     if (selectedUnits.length === 0) {
       throw new Error("Please select at least one unit");
     }
-
-    if (subject === "LAW" && selectedUnits.length < 2) {
-      throw new Error(
-        "Law requires completion of both Paper 1 and Paper 2 in the same exam series"
-      );
-    }
-
-    validateLocking(subject, selectedUnits, qualificationHistory);
 
     const hasOnlineVariant = selectedUnits.some((unit) => unit.endsWith("C"));
     const hasOfflineVariant = selectedUnits.some(
@@ -329,39 +102,16 @@ export default function App() {
     }
   };
 
-  const checkEligibility = () => {
+ const checkEligibility = () => {
     try {
       setError(null);
-      validateInput(subject, selectedUnits, qualificationHistory);
+      validateInput(subject, selectedUnits);
 
       const subjectData = subjects[subject];
-      let eligibilityResult;
-
-      switch (subject) {
-        case "MATHEMATICS":
-          eligibilityResult = checkMathematicsEligibility(
-            subjectData.criteria,
-            selectedUnits
-          );
-          break;
-        case "FURTHER_MATHEMATICS":
-          eligibilityResult = checkFurtherMathsEligibility(
-            subjectData.criteria,
-            selectedUnits
-          );
-          break;
-        case "PURE_MATHEMATICS":
-          eligibilityResult = checkPureMathsEligibility(
-            subjectData.criteria,
-            selectedUnits
-          );
-          break;
-        default:
-          eligibilityResult = checkStandardEligibility(
-            subjectData.criteria,
-            selectedUnits
-          );
-      }
+      const eligibilityResult = checkStandardEligibility(
+        subjectData.criteria,
+        selectedUnits
+      );
 
       setResult(eligibilityResult);
     } catch (err) {
@@ -370,7 +120,7 @@ export default function App() {
     }
   };
 
-  return (
+ return (
     <div className="min-h-screen bg-[#DFE1E1] font-['Open_Sans']">
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-[#FFFFFF] rounded-lg shadow-lg p-6 mb-8">
@@ -455,68 +205,6 @@ export default function App() {
                 ))}
               </div>
 
-              {subject && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-[#000000] mb-4">
-                    Previous Qualifications:
-                  </h3>
-                  <div className="space-y-3 bg-[#DFE1E1] p-4 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="reenter-ias"
-                        className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                        onChange={(e) => {
-                          const newHistory = e.target.checked
-                            ? [
-                                ...qualificationHistory,
-                                {
-                                  level: "AS",
-                                  type: subject,
-                                  date: new Date(),
-                                },
-                              ]
-                            : qualificationHistory.filter(
-                                (q) => q.level !== "AS"
-                              );
-                          setQualificationHistory(newHistory);
-                        }}
-                      />
-                      <label
-                        htmlFor="reenter-ias"
-                        className="text-sm text-[#000000] font-medium"
-                      >
-                        Re-enter IAS {subject.replace("_", " ")}
-                      </label>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="reenter-ial"
-                        className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                        onChange={(e) => {
-                          const newHistory = e.target.checked
-                            ? [
-                                ...qualificationHistory,
-                                { level: "A", type: subject, date: new Date() },
-                              ]
-                            : qualificationHistory.filter(
-                                (q) => q.level !== "A"
-                              );
-                          setQualificationHistory(newHistory);
-                        }}
-                      />
-                      <label
-                        htmlFor="reenter-ial"
-                        className="text-sm text-[#000000] font-medium"
-                      >
-                        Re-enter IAL {subject.replace("_", " ")}
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <button
                 className="mt-6 px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
                 onClick={checkEligibility}
@@ -533,45 +221,6 @@ export default function App() {
                   <h4 className="font-semibold">
                     Eligible for: {result.eligible.join(" and ")} Level
                   </h4>
-                </div>
-              )}
-
-              {result && qualificationHistory.length > 0 && (
-                <div className="mt-4">
-                  <div className="p-4 bg-[#DFE1E1] border border-[#505759] rounded-lg">
-                    <h4 className="font-semibold mb-2">
-                      Re-certification Analysis
-                    </h4>
-                    {maximizeGrades(selectedUnits, qualificationHistory)
-                      ?.requiresRecertification ? (
-                      <>
-                        <p className="text-sm mb-2">
-                          Re-entering both qualifications may optimize your
-                          grades. Recommended unit allocation:
-                        </p>
-                        <div className="pl-4">
-                          <p className="text-sm">
-                            Mathematics:{" "}
-                            {maximizeGrades(
-                              selectedUnits,
-                              qualificationHistory
-                            )?.recommendedUnits?.mathematics?.join(", ")}
-                          </p>
-                          <p className="text-sm">
-                            Further Mathematics:{" "}
-                            {maximizeGrades(
-                              selectedUnits,
-                              qualificationHistory
-                            )?.recommendedUnits?.furtherMaths?.join(", ")}
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-sm">
-                        No grade optimization opportunities found
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
 
@@ -619,6 +268,15 @@ export default function App() {
           <p className="text-[#505759] mt-2 text-xs">
             This calculator is a guide only. Please refer to the official
             documentation for complete eligibility requirements.
+          </p>
+          <p className="text-[#505759] mt-2">
+            For Mathematics qualifications, please use our{" "}
+            <a
+              href="/maths-eligibility"
+              className="text-[#003057] hover:text-[#FFBB1C] font-semibold"
+            >
+              dedicated Mathematics Eligibility Calculator
+            </a>
           </p>
         </div>
       </div>
