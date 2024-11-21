@@ -1,2 +1,0 @@
-# IALEligibilityCalculator
-Created with CodeSandbox
