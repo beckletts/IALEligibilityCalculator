@@ -621,7 +621,7 @@ const MathEligibilityCalculator = () => {
           )}
         </div>
 
-        <div className="text-center text-sm mt-6 p-4 bg-[#FFFFFF] rounded-lg border border-[#505759]">
+      <div className="text-center text-sm mt-6 p-4 bg-[#FFFFFF] rounded-lg border border-[#505759]">
           <p className="text-[#505759] mb-2">
             Need more information about IAL Mathematics eligibility?
           </p>
@@ -651,7 +651,9 @@ const MathEligibilityCalculator = () => {
             This calculator is a guide only. Please refer to the official
             documentation for complete eligibility requirements.
           </p>
-        </div
+        </div>
+      </div>
+    </div>
+  );
 };
-
 export default MathEligibilityCalculator;
