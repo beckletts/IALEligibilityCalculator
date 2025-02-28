@@ -25,6 +25,40 @@ const mathsUnits = {
   ]
 };
 
+// Mathematics qualifications
+const qualifications = [
+  { 
+    id: "IAS_MATHEMATICS", 
+    name: "IAS Mathematics",
+    description: "International Advanced Subsidiary Mathematics"
+  },
+  { 
+    id: "IAL_MATHEMATICS", 
+    name: "IAL Mathematics",
+    description: "International Advanced Level Mathematics" 
+  },
+  { 
+    id: "IAS_FURTHER_MATHEMATICS", 
+    name: "IAS Further Mathematics",
+    description: "International Advanced Subsidiary Further Mathematics" 
+  },
+  { 
+    id: "IAL_FURTHER_MATHEMATICS", 
+    name: "IAL Further Mathematics",
+    description: "International Advanced Level Further Mathematics" 
+  },
+  { 
+    id: "IAS_PURE_MATHEMATICS", 
+    name: "IAS Pure Mathematics",
+    description: "International Advanced Subsidiary Pure Mathematics" 
+  },
+  { 
+    id: "IAL_PURE_MATHEMATICS", 
+    name: "IAL Pure Mathematics",
+    description: "International Advanced Level Pure Mathematics" 
+  }
+];
+
 // Criteria for different mathematics qualifications
 const mathsCriteria = {
   IAS_MATHEMATICS: {
@@ -246,6 +280,191 @@ const MathEligibilityCalculator = () => {
     }
   };
 
+  const [step, setStep] = useState(1);
+  const [targetQualification, setTargetQualification] = useState("");
+  const [expandedSections, setExpandedSections] = useState({
+    pure: true,
+    further: true,
+    applied: true
+  });
+  
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+  
+  // Get relevant units based on selected qualification
+  const getRelevantUnits = () => {
+    switch(targetQualification) {
+      case "IAS_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure.filter(unit => ["P1", "P2"].includes(unit.code)),
+          further: [],
+          applied: mathsUnits.applied.filter(unit => ["S1", "M1", "D1"].includes(unit.code))
+        };
+      case "IAL_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure,
+          further: [],
+          applied: mathsUnits.applied.filter(unit => ["S1", "S2", "M1", "M2", "D1"].includes(unit.code))
+        };
+      case "IAS_FURTHER_MATHEMATICS":
+        return {
+          pure: [],
+          further: mathsUnits.further.filter(unit => unit.code === "FP1"),
+          applied: mathsUnits.applied
+        };
+      case "IAL_FURTHER_MATHEMATICS":
+        return {
+          pure: [],
+          further: mathsUnits.further,
+          applied: mathsUnits.applied
+        };
+      case "IAS_PURE_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure.filter(unit => ["P1", "P2"].includes(unit.code)),
+          further: mathsUnits.further.filter(unit => unit.code === "FP1"),
+          applied: []
+        };
+      case "IAL_PURE_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure,
+          further: mathsUnits.further,
+          applied: []
+        };
+      default:
+        return mathsUnits;
+    }
+  };
+
+  const renderUnitsSection = (sectionName, units) => {
+    if (units.length === 0) return null;
+    
+    return (
+      <div className="mb-4">
+        <div 
+          className="flex items-center justify-between bg-[#94E7EA] p-2 rounded cursor-pointer"
+          onClick={() => toggleSection(sectionName)}
+        >
+          <h4 className="font-semibold">{sectionName === "pure" ? "Pure Mathematics" : 
+                                         sectionName === "further" ? "Further Pure Mathematics" : 
+                                         "Applied Mathematics"}</h4>
+          <svg 
+            className={`w-5 h-5 transition-transform ${expandedSections[sectionName] ? 'transform rotate-180' : ''}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+        
+        {expandedSections[sectionName] && (
+          <div className="bg-[#DFE1E1] p-3 rounded-b">
+            {units.map((unit) => (
+              <div key={unit.code} className="flex items-center gap-3 mb-2">
+                <input
+                  type="checkbox"
+                  id={unit.code}
+                  className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
+                  checked={selectedUnits.includes(unit.code)}
+                  onChange={() => handleUnitToggle(unit.code)}
+                />
+                <label
+                  htmlFor={unit.code}
+                  className="text-sm text-[#000000] font-medium"
+                >
+                  {unit.code} - {unit.name}
+                </label>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderQualificationDetails = () => {
+    switch(targetQualification) {
+      case "IAS_MATHEMATICS":
+        return (
+          <div className="bg-[#DFE1E1] p-4 rounded-lg mb-4">
+            <h4 className="font-semibold">IAS Mathematics Requirements:</h4>
+            <ul className="list-disc pl-5 mt-2">
+              <li>P1 and P2 (Pure Mathematics)</li>
+              <li>One of: S1, M1, or D1 (Applied Mathematics)</li>
+            </ul>
+          </div>
+        );
+      case "IAL_MATHEMATICS":
+        return (
+          <div className="bg-[#DFE1E1] p-4 rounded-lg mb-4">
+            <h4 className="font-semibold">IAL Mathematics Requirements:</h4>
+            <ul className="list-disc pl-5 mt-2">
+              <li>P1, P2, P3, and P4 (Pure Mathematics)</li>
+              <li>One of these pairs:
+                <ul className="list-circle pl-5">
+                  <li>S1 and S2</li>
+                  <li>M1 and M2</li>
+                  <li>S1 and M1</li>
+                  <li>S1 and D1</li>
+                  <li>M1 and D1</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        );
+      case "IAS_FURTHER_MATHEMATICS":
+        return (
+          <div className="bg-[#DFE1E1] p-4 rounded-lg mb-4">
+            <h4 className="font-semibold">IAS Further Mathematics Requirements:</h4>
+            <ul className="list-disc pl-5 mt-2">
+              <li>FP1 (Further Pure Mathematics)</li>
+              <li>Two more units (excluding P1, P2, P3, P4)</li>
+              <li>Note: Requires IAS Mathematics to also be awarded</li>
+            </ul>
+          </div>
+        );
+      case "IAL_FURTHER_MATHEMATICS":
+        return (
+          <div className="bg-[#DFE1E1] p-4 rounded-lg mb-4">
+            <h4 className="font-semibold">IAL Further Mathematics Requirements:</h4>
+            <ul className="list-disc pl-5 mt-2">
+              <li>FP1 (Further Pure Mathematics)</li>
+              <li>At least one of FP2 or FP3</li>
+              <li>Four more units (excluding P1, P2, P3, P4)</li>
+              <li>Note: Requires IAL Mathematics to also be awarded</li>
+            </ul>
+          </div>
+        );
+      case "IAS_PURE_MATHEMATICS":
+        return (
+          <div className="bg-[#DFE1E1] p-4 rounded-lg mb-4">
+            <h4 className="font-semibold">IAS Pure Mathematics Requirements:</h4>
+            <ul className="list-disc pl-5 mt-2">
+              <li>P1 and P2 (Pure Mathematics)</li>
+              <li>FP1 (Further Pure Mathematics)</li>
+            </ul>
+          </div>
+        );
+      case "IAL_PURE_MATHEMATICS":
+        return (
+          <div className="bg-[#DFE1E1] p-4 rounded-lg mb-4">
+            <h4 className="font-semibold">IAL Pure Mathematics Requirements:</h4>
+            <ul className="list-disc pl-5 mt-2">
+              <li>P1, P2, P3, and P4 (Pure Mathematics)</li>
+              <li>FP1 (Further Pure Mathematics)</li>
+              <li>One of: FP2 or FP3</li>
+            </ul>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#DFE1E1] font-['Open_Sans']">
       <div className="max-w-4xl mx-auto p-6">
@@ -277,83 +496,83 @@ const MathEligibilityCalculator = () => {
             </Alert>
           )}
 
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-[#000000] mb-4">
-              Select your completed units:
-            </h3>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3 bg-[#DFE1E1] p-4 rounded-lg">
-                <h4 className="font-semibold">Pure Mathematics</h4>
-                {mathsUnits.pure.map((unit) => (
-                  <div key={unit.code} className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id={unit.code}
-                      className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                      checked={selectedUnits.includes(unit.code)}
-                      onChange={() => handleUnitToggle(unit.code)}
-                    />
-                    <label
-                      htmlFor={unit.code}
-                      className="text-sm text-[#000000] font-medium"
-                    >
-                      {unit.code} - {unit.name}
-                    </label>
-                  </div>
-                ))}
-
-                <h4 className="font-semibold mt-4">Further Pure Mathematics</h4>
-                {mathsUnits.further.map((unit) => (
-                  <div key={unit.code} className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id={unit.code}
-                      className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                      checked={selectedUnits.includes(unit.code)}
-                      onChange={() => handleUnitToggle(unit.code)}
-                    />
-                    <label
-                      htmlFor={unit.code}
-                      className="text-sm text-[#000000] font-medium"
-                    >
-                      {unit.code} - {unit.name}
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-3 bg-[#DFE1E1] p-4 rounded-lg">
-                <h4 className="font-semibold">Applied Mathematics</h4>
-                {mathsUnits.applied.map((unit) => (
-                  <div key={unit.code} className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id={unit.code}
-                      className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                      checked={selectedUnits.includes(unit.code)}
-                      onChange={() => handleUnitToggle(unit.code)}
-                    />
-                    <label
-                      htmlFor={unit.code}
-                      className="text-sm text-[#000000] font-medium"
-                    >
-                      {unit.code} - {unit.name}
-                    </label>
-                  </div>
-                ))}
+          {step === 1 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-[#000000] mb-4">
+                Step 1: Which qualification are you checking eligibility for?
+              </h3>
+              
+              <div className="bg-[#DFE1E1] p-4 rounded-lg">
+                <select
+                  className="w-full p-2 border border-[#505759] rounded focus:border-[#94E7EA] focus:ring focus:ring-[#94E7EA] focus:ring-opacity-50"
+                  value={targetQualification}
+                  onChange={(e) => setTargetQualification(e.target.value)}
+                >
+                  <option value="">Select a qualification...</option>
+                  {qualifications.map(qual => (
+                    <option key={qual.id} value={qual.id}>
+                      {qual.name} - {qual.description}
+                    </option>
+                  ))}
+                </select>
+                
+                {targetQualification && renderQualificationDetails()}
+                
+                <div className="flex justify-end mt-4">
+                  <button
+                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
+                    onClick={() => setStep(2)}
+                    disabled={!targetQualification}
+                  >
+                    Next: Select Units
+                  </button>
+                </div>
               </div>
             </div>
+          )}
 
-            <div className="flex justify-center mt-6">
-              <button
-                className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
-                onClick={checkEligibility}
-              >
-                Check Eligibility
-              </button>
+          {step === 2 && (
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <button
+                  className="mr-2 bg-[#94E7EA] p-1 rounded"
+                  onClick={() => setStep(1)}
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h3 className="text-lg font-semibold text-[#000000]">
+                  Step 2: Select your completed units
+                </h3>
+              </div>
+              
+              <p className="mb-4 text-[#505759]">
+                Check all units you have completed or plan to complete:
+              </p>
+
+              <div className="space-y-2">
+                {renderQualificationDetails()}
+                
+                {targetQualification && (
+                  <>
+                    {renderUnitsSection("pure", getRelevantUnits().pure)}
+                    {renderUnitsSection("further", getRelevantUnits().further)}
+                    {renderUnitsSection("applied", getRelevantUnits().applied)}
+                  </>
+                )}
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
+                  onClick={checkEligibility}
+                >
+                  Check Eligibility
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {result && (
             <div className="mt-6 space-y-4">
@@ -386,38 +605,20 @@ const MathEligibilityCalculator = () => {
                   ))}
                 </div>
               )}
+              
+              <button
+                className="px-6 py-2 bg-[#505759] text-white rounded-lg hover:bg-[#333] transition-colors duration-200 font-semibold"
+                onClick={() => {
+                  setStep(1);
+                  setResult(null);
+                  setSelectedUnits([]);
+                  setTargetQualification("");
+                }}
+              >
+                Start Over
+              </button>
             </div>
           )}
-        </div>
-
-        <div className="bg-[#FFFFFF] rounded-lg p-4 mb-4">
-          <h3 className="font-semibold text-[#003057] mb-2">IAL Mathematics Qualification Rules</h3>
-          <div className="space-y-4 text-sm">
-            <div>
-              <h4 className="font-medium">IAS Mathematics</h4>
-              <p>Requires P1, P2, and one of: S1, M1, or D1</p>
-            </div>
-            <div>
-              <h4 className="font-medium">IAL Mathematics</h4>
-              <p>Requires P1, P2, P3, P4, and one of these pairs: S1+S2, M1+M2, S1+M1, S1+D1, or M1+D1</p>
-            </div>
-            <div>
-              <h4 className="font-medium">IAS Further Mathematics</h4>
-              <p>Requires FP1 and any two other units that aren't P1, P2, P3, or P4</p>
-            </div>
-            <div>
-              <h4 className="font-medium">IAL Further Mathematics</h4>
-              <p>Requires FP1, at least one of FP2 or FP3, and any four other units that aren't P1, P2, P3, or P4</p>
-            </div>
-            <div>
-              <h4 className="font-medium">IAS Pure Mathematics</h4>
-              <p>Requires P1, P2, and FP1</p>
-            </div>
-            <div>
-              <h4 className="font-medium">IAL Pure Mathematics</h4>
-              <p>Requires P1, P2, P3, P4, FP1, and one of: FP2 or FP3</p>
-            </div>
-          </div>
         </div>
 
         <div className="text-center text-sm mt-6 p-4 bg-[#FFFFFF] rounded-lg border border-[#505759]">
@@ -450,10 +651,7 @@ const MathEligibilityCalculator = () => {
             This calculator is a guide only. Please refer to the official
             documentation for complete eligibility requirements.
           </p>
-        </div>
-      </div>
-    </div>
-  );
+        </div
 };
 
 export default MathEligibilityCalculator;
