@@ -626,7 +626,7 @@ const MathEligibilityCalculator = () => {
             Need more information about IAL Mathematics eligibility?
           </p>
           <a
-            href="https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/specification-and-sample-assesment/International-A-Level-Maths-Spec.pdf"
+            href="https://qualifications.pearson.com/en/qualifications/edexcel-international-advanced-levels/mathematics-2018.html"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center text-[#003057] hover:text-[#FFBB1C] font-semibold gap-1"
