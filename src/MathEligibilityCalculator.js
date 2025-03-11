@@ -1,31 +1,31 @@
 import React, { useState } from "react";
 import Alert from "./Alert";
 
-// Mathematics units data with added qualification codes
+// Mathematics units data with added codes from the specification table
 const mathsUnits = {
   pure: [
-    { code: "P1", name: "Pure Mathematics 1", examCode: "YMA01", cashable: true },
-    { code: "P2", name: "Pure Mathematics 2", examCode: "YMA02", cashable: true },
-    { code: "P3", name: "Pure Mathematics 3", examCode: "YMA03", cashable: true },
-    { code: "P4", name: "Pure Mathematics 4", examCode: "YMA04", cashable: true }
+    { code: "P1", name: "Pure Mathematics 1", examCode: "WMA11", cashable: true },
+    { code: "P2", name: "Pure Mathematics 2", examCode: "WMA12", cashable: true },
+    { code: "P3", name: "Pure Mathematics 3", examCode: "WMA13", cashable: true },
+    { code: "P4", name: "Pure Mathematics 4", examCode: "WMA14", cashable: true }
   ],
   further: [
-    { code: "FP1", name: "Further Pure Mathematics 1", examCode: "YFM01", cashable: true },
-    { code: "FP2", name: "Further Pure Mathematics 2", examCode: "YFM02", cashable: true },
-    { code: "FP3", name: "Further Pure Mathematics 3", examCode: "YFM03", cashable: true }
+    { code: "FP1", name: "Further Pure Mathematics 1", examCode: "WFM01", cashable: true },
+    { code: "FP2", name: "Further Pure Mathematics 2", examCode: "WFM02", cashable: true },
+    { code: "FP3", name: "Further Pure Mathematics 3", examCode: "WFM03", cashable: true }
   ],
   applied: [
-    { code: "M1", name: "Mechanics 1", examCode: "YME01", cashable: true },
-    { code: "M2", name: "Mechanics 2", examCode: "YME02", cashable: true },
-    { code: "M3", name: "Mechanics 3", examCode: "YME03", cashable: true },
-    { code: "S1", name: "Statistics 1", examCode: "YST01", cashable: true },
-    { code: "S2", name: "Statistics 2", examCode: "YST02", cashable: true },
-    { code: "S3", name: "Statistics 3", examCode: "YST03", cashable: true },
-    { code: "D1", name: "Decision Mathematics 1", examCode: "YDM01", cashable: true }
+    { code: "M1", name: "Mechanics 1", examCode: "WME01", cashable: true },
+    { code: "M2", name: "Mechanics 2", examCode: "WME02", cashable: true },
+    { code: "M3", name: "Mechanics 3", examCode: "WME03", cashable: true },
+    { code: "S1", name: "Statistics 1", examCode: "WST01", cashable: true },
+    { code: "S2", name: "Statistics 2", examCode: "WST02", cashable: true },
+    { code: "S3", name: "Statistics 3", examCode: "WST03", cashable: true },
+    { code: "D1", name: "Decision Mathematics 1", examCode: "WDM11", cashable: true }
   ]
 };
 
-// Mathematics qualifications with codes
+// Mathematics qualifications with codes from the specification
 const qualifications = [
   { 
     id: "IAS_MATHEMATICS", 
@@ -101,6 +101,30 @@ const mathsCriteria = {
   }
 };
 
+// Availability data based on the table in the image
+const unitAvailability = {
+  "WME01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WME02": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WME03": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
+  "WST01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WST02": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WST03": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
+  "WFM01": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
+  "WFM02": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
+  "WFM03": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
+  "WMA11": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WMA12": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WMA13": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WMA14": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "WDM11": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
+  "XMA01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "XFM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "XPM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "YMA01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "YFM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
+  "YPM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" }
+};
+
 const MathEligibilityCalculator = () => {
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [cashedInUnits, setCashedInUnits] = useState([]);
@@ -114,6 +138,7 @@ const MathEligibilityCalculator = () => {
     further: true,
     applied: true
   });
+  const [viewMode, setViewMode] = useState("normal"); // normal or availability
   
   const handleUnitToggle = (unitCode) => {
     setSelectedUnits(prev => {
@@ -421,6 +446,13 @@ const MathEligibilityCalculator = () => {
                   <th className="pb-1 w-16">Select</th>
                   <th className="pb-1">Unit</th>
                   <th className="pb-1">Exam Code</th>
+                  {viewMode === "availability" && (
+                    <>
+                      <th className="pb-1 text-center">Oct 2024</th>
+                      <th className="pb-1 text-center">Jan 2025</th>
+                      <th className="pb-1 text-center">Jun 2025</th>
+                    </>
+                  )}
                   <th className="pb-1 w-24">Previously Used</th>
                 </tr>
               </thead>
@@ -445,6 +477,13 @@ const MathEligibilityCalculator = () => {
                       </label>
                     </td>
                     <td className="text-sm">{unit.examCode}</td>
+                    {viewMode === "availability" && unitAvailability[unit.examCode] && (
+                      <>
+                        <td className="text-center text-sm">{unitAvailability[unit.examCode].oct2024}</td>
+                        <td className="text-center text-sm">{unitAvailability[unit.examCode].jan2025}</td>
+                        <td className="text-center text-sm">{unitAvailability[unit.examCode].jun2025}</td>
+                      </>
+                    )}
                     <td>
                       <input
                         type="checkbox"
@@ -560,8 +599,8 @@ const MathEligibilityCalculator = () => {
             completed units.
           </p>
 
-          <Alert variant="warning">
-            <div className="flex">
+          <Alert variant="default">
+            <div className="flex items-center">
               <svg
                 className="h-5 w-5 mr-2"
                 viewBox="0 0 20 20"
@@ -569,7 +608,7 @@ const MathEligibilityCalculator = () => {
               >
                 <path
                   fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1H9z"
                   clipRule="evenodd"
                 />
               </svg>
@@ -783,4 +822,28 @@ const MathEligibilityCalculator = () => {
   );
 };
 
-export default MathEligibilityCalculator;
+export default MathEligibilityCalculator;evenodd"
+                />
+              </svg>
+              <span className="font-semibold">New Feature:</span>
+              <span className="ml-1">Unit codes from the official specification have been added to help with exam entry.</span>
+              <button 
+                className="ml-auto px-2 py-1 bg-[#FFBB1C] text-xs rounded text-[#000000] hover:bg-[#FFD700]"
+                onClick={() => setViewMode(viewMode === "normal" ? "availability" : "normal")}
+              >
+                {viewMode === "normal" ? "Show Exam Availability" : "Hide Exam Availability"}
+              </button>
+            </div>
+          </Alert>
+
+          <Alert variant="warning">
+            <div className="flex">
+              <svg
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="
