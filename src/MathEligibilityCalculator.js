@@ -413,6 +413,45 @@ const MathEligibilityCalculator = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
+
+        <div className="text-center text-sm mt-6 p-4 bg-[#FFFFFF] rounded-lg border border-[#505759]">
+          <p className="text-[#505759] mb-2">
+            Need more information about IAL Mathematics eligibility?
+          </p>
+          <a
+            href="https://qualifications.pearson.com/en/qualifications/edexcel-international-advanced-levels/mathematics-2018.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-[#003057] hover:text-[#FFBB1C] font-semibold gap-1"
+          >
+            View full eligibility rules on Pearson Support
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+          </a>
+          <div className="text-[#FF4D4F] font-medium mt-3 p-2 border border-[#FF4D4F] rounded-lg">
+            <p className="mb-1">⚠️ Important Disclaimer:</p>
+            <p className="text-xs">
+              Units that have been previously used (cashed in) for other qualifications may not be eligible for reuse. 
+              Please consult with your exam officer or examination board for final confirmation of eligibility.
+            </p>
+          </div>
+          <p className="text-[#505759] mt-3 text-xs">
+            This calculator is a guide only. Please refer to the official
+            documentation for complete eligibility requirements.
+          </p>
+        </div>
         
         {expandedSections[sectionName] && (
           <div className="bg-[#DFE1E1] p-3 rounded-b">
@@ -633,6 +672,52 @@ const MathEligibilityCalculator = () => {
             </div>
           )}
 
+          {result && (
+            <div className="mt-6 space-y-4">
+              {result.eligible.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">You are eligible for:</h4>
+                  <div className="p-4 bg-[#8DC63F] border border-[#8DC63F] rounded-lg text-[#000000]">
+                    <ul className="list-disc pl-5">
+                      {result.eligible.map((qualification, index) => (
+                        <li key={index} className="font-medium">
+                          {qualification.name} ({qualification.code})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {result.missing.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Missing requirements for:</h4>
+                  {result.missing.map((item, index) => (
+                    <div
+                      key={index}
+                      className="p-4 bg-[#FF757A] border border-[#FF757A] rounded-lg text-[#000000] mb-3"
+                    >
+                      <h5 className="font-semibold">{item.qualification} ({item.code})</h5>
+                      <p className="mt-1">Missing: {Array.isArray(item.requirements) ? item.requirements.join(", ") : item.requirements}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <button
+                className="px-6 py-2 bg-[#505759] text-white rounded-lg hover:bg-[#333] transition-colors duration-200 font-semibold"
+                onClick={() => {
+                  setStep(1);
+                  setResult(null);
+                  setSelectedUnits([]);
+                  setTargetQualification("");
+                }}
+              >
+                Start Over
+              </button>
+            </div>
+          )}
+
           {step === 2 && (
             <div className="mb-6">
               <div className="flex items-center mb-4">
@@ -661,29 +746,3 @@ const MathEligibilityCalculator = () => {
                     {renderUnitsSection("pure", getRelevantUnits().pure)}
                     {renderUnitsSection("further", getRelevantUnits().further)}
                     {renderUnitsSection("applied", getRelevantUnits().applied)}
-                  </>
-                )}
-              </div>
-
-              <div className="mt-6 bg-[#DFE1E1] p-4 rounded-lg">
-                <div className="flex items-start mb-4">
-                  <input
-                    type="checkbox"
-                    id="selfCheckConfirmation"
-                    className="mt-1 w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                    checked={selfCheckConfirmed}
-                    onChange={(e) => setSelfCheckConfirmed(e.target.checked)}
-                  />
-                  <label htmlFor="selfCheckConfirmation" className="ml-2 text-sm text-[#000000]">
-                    I confirm that I have reviewed the IAL Mathematics eligibility rules and verified that my selected units meet the criteria. I understand that units previously cashed in for other qualifications may not be eligible for reuse.
-                  </label>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
-                    onClick={checkEligibility}
-                  >
-                    Check Eligibility
-                  </button>
-                </div>
