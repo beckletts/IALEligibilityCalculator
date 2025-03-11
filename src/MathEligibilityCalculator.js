@@ -107,6 +107,13 @@ const MathEligibilityCalculator = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [selfCheckConfirmed, setSelfCheckConfirmed] = useState(false);
+  const [step, setStep] = useState(1);
+  const [targetQualification, setTargetQualification] = useState("");
+  const [expandedSections, setExpandedSections] = useState({
+    pure: true,
+    further: true,
+    applied: true
+  });
   
   const handleUnitToggle = (unitCode) => {
     setSelectedUnits(prev => {
@@ -128,6 +135,57 @@ const MathEligibilityCalculator = () => {
       }
     });
     setResult(null);
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // Get relevant units based on selected qualification
+  const getRelevantUnits = () => {
+    switch(targetQualification) {
+      case "IAS_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure.filter(unit => ["P1", "P2"].includes(unit.code)),
+          further: [],
+          applied: mathsUnits.applied.filter(unit => ["S1", "M1", "D1"].includes(unit.code))
+        };
+      case "IAL_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure,
+          further: [],
+          applied: mathsUnits.applied.filter(unit => ["S1", "S2", "M1", "M2", "D1"].includes(unit.code))
+        };
+      case "IAS_FURTHER_MATHEMATICS":
+        return {
+          pure: [],
+          further: mathsUnits.further.filter(unit => unit.code === "FP1"),
+          applied: mathsUnits.applied
+        };
+      case "IAL_FURTHER_MATHEMATICS":
+        return {
+          pure: [],
+          further: mathsUnits.further,
+          applied: mathsUnits.applied
+        };
+      case "IAS_PURE_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure.filter(unit => ["P1", "P2"].includes(unit.code)),
+          further: mathsUnits.further.filter(unit => unit.code === "FP1"),
+          applied: []
+        };
+      case "IAL_PURE_MATHEMATICS":
+        return {
+          pure: mathsUnits.pure,
+          further: mathsUnits.further,
+          applied: []
+        };
+      default:
+        return mathsUnits;
+    }
   };
 
   const checkEligibility = () => {
@@ -333,65 +391,6 @@ const MathEligibilityCalculator = () => {
     }
   };
 
-  const [step, setStep] = useState(1);
-  const [targetQualification, setTargetQualification] = useState("");
-  const [expandedSections, setExpandedSections] = useState({
-    pure: true,
-    further: true,
-    applied: true
-  });
-  
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-  
-  // Get relevant units based on selected qualification
-  const getRelevantUnits = () => {
-    switch(targetQualification) {
-      case "IAS_MATHEMATICS":
-        return {
-          pure: mathsUnits.pure.filter(unit => ["P1", "P2"].includes(unit.code)),
-          further: [],
-          applied: mathsUnits.applied.filter(unit => ["S1", "M1", "D1"].includes(unit.code))
-        };
-      case "IAL_MATHEMATICS":
-        return {
-          pure: mathsUnits.pure,
-          further: [],
-          applied: mathsUnits.applied.filter(unit => ["S1", "S2", "M1", "M2", "D1"].includes(unit.code))
-        };
-      case "IAS_FURTHER_MATHEMATICS":
-        return {
-          pure: [],
-          further: mathsUnits.further.filter(unit => unit.code === "FP1"),
-          applied: mathsUnits.applied
-        };
-      case "IAL_FURTHER_MATHEMATICS":
-        return {
-          pure: [],
-          further: mathsUnits.further,
-          applied: mathsUnits.applied
-        };
-      case "IAS_PURE_MATHEMATICS":
-        return {
-          pure: mathsUnits.pure.filter(unit => ["P1", "P2"].includes(unit.code)),
-          further: mathsUnits.further.filter(unit => unit.code === "FP1"),
-          applied: []
-        };
-      case "IAL_PURE_MATHEMATICS":
-        return {
-          pure: mathsUnits.pure,
-          further: mathsUnits.further,
-          applied: []
-        };
-      default:
-        return mathsUnits;
-    }
-  };
-
   const renderUnitsSection = (sectionName, units) => {
     if (units.length === 0) return null;
     
@@ -452,6 +451,12 @@ const MathEligibilityCalculator = () => {
             documentation for complete eligibility requirements.
           </p>
         </div>
+      </div>
+    </div>
+  );
+};
+
+export default MathEligibilityCalculator;
         
         {expandedSections[sectionName] && (
           <div className="bg-[#DFE1E1] p-3 rounded-b">
@@ -746,3 +751,30 @@ const MathEligibilityCalculator = () => {
                     {renderUnitsSection("pure", getRelevantUnits().pure)}
                     {renderUnitsSection("further", getRelevantUnits().further)}
                     {renderUnitsSection("applied", getRelevantUnits().applied)}
+                  </>
+                )}
+              </div>
+
+              <div className="mt-6 bg-[#DFE1E1] p-4 rounded-lg">
+                <div className="flex items-start mb-4">
+                  <input
+                    type="checkbox"
+                    id="selfCheckConfirmation"
+                    className="mt-1 w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
+                    checked={selfCheckConfirmed}
+                    onChange={(e) => setSelfCheckConfirmed(e.target.checked)}
+                  />
+                  <label htmlFor="selfCheckConfirmation" className="ml-2 text-sm text-[#000000]">
+                    I confirm that I have reviewed the IAL Mathematics eligibility rules and verified that my selected units meet the criteria. I understand that units previously cashed in for other qualifications may not be eligible for reuse.
+                  </label>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
+                    onClick={checkEligibility}
+                  >
+                    Check Eligibility
+                  </button>
+                </div>
+              </div>
