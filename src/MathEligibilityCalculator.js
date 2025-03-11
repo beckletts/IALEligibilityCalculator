@@ -612,6 +612,30 @@ const MathEligibilityCalculator = () => {
                   clipRule="evenodd"
                 />
               </svg>
+              <span className="font-semibold">New Feature:</span>
+              <span className="ml-1">Unit codes from the official specification have been added to help with exam entry.</span>
+              <button 
+                className="ml-auto px-2 py-1 bg-[#FFBB1C] text-xs rounded text-[#000000] hover:bg-[#FFD700]"
+                onClick={() => setViewMode(viewMode === "normal" ? "availability" : "normal")}
+              >
+                {viewMode === "normal" ? "Show Exam Availability" : "Hide Exam Availability"}
+              </button>
+            </div>
+          </Alert>
+
+          <Alert variant="warning">
+            <div className="flex">
+              <svg
+                className="h-5 w-5 mr-2"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
               <span className="font-semibold">Important: </span>
               <span className="ml-1">Units that have been previously used (cashed in) for other qualifications may not be eligible for reuse. Please verify your unit selection carefully.</span>
             </div>
@@ -822,28 +846,4 @@ const MathEligibilityCalculator = () => {
   );
 };
 
-export default MathEligibilityCalculator;evenodd"
-                />
-              </svg>
-              <span className="font-semibold">New Feature:</span>
-              <span className="ml-1">Unit codes from the official specification have been added to help with exam entry.</span>
-              <button 
-                className="ml-auto px-2 py-1 bg-[#FFBB1C] text-xs rounded text-[#000000] hover:bg-[#FFD700]"
-                onClick={() => setViewMode(viewMode === "normal" ? "availability" : "normal")}
-              >
-                {viewMode === "normal" ? "Show Exam Availability" : "Hide Exam Availability"}
-              </button>
-            </div>
-          </Alert>
-
-          <Alert variant="warning">
-            <div className="flex">
-              <svg
-                className="h-5 w-5 mr-2"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="
+export default MathEligibilityCalculator;
