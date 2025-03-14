@@ -115,7 +115,7 @@ const MathEligibilityCalculator = () => {
     applied: true
   });
   const [previousCashIns, setPreviousCashIns] = useState([]);
-  const [newCashIn, setNewCashIn] = useState("");
+  const [cashInSelectValue, setCashInSelectValue] = useState("");
   
   const handleUnitToggle = (unitCode) => {
     setSelectedUnits(prev => {
@@ -139,14 +139,14 @@ const MathEligibilityCalculator = () => {
     setResult(null);
   };
 
-  const handleNewCashInChange = (e) => {
-    setNewCashIn(e.target.value);
+  const handleCashInSelectChange = (e) => {
+    setCashInSelectValue(e.target.value);
   };
 
   const addPreviousCashIn = () => {
-    if (newCashIn && !previousCashIns.includes(newCashIn)) {
-      setPreviousCashIns([...previousCashIns, newCashIn]);
-      setNewCashIn("");
+    if (cashInSelectValue && !previousCashIns.includes(cashInSelectValue)) {
+      setPreviousCashIns([...previousCashIns, cashInSelectValue]);
+      setCashInSelectValue("");
     }
   };
 
@@ -169,19 +169,8 @@ const MathEligibilityCalculator = () => {
       // Check if user is selecting cashed-in units without relevant previous cash-ins
       const selectedCashedInUnits = selectedUnits.filter(unit => cashedInUnits.includes(unit));
       
-      if (selectedCashedInUnits.length > 0) {
-        // Check if previous cash-ins were entered for relevant qualification types
-        const hasIASMathsCashIn = previousCashIns.includes("XMA01");
-        const hasIALMathsCashIn = previousCashIns.includes("YMA01");
-        const hasIASFurtherCashIn = previousCashIns.includes("XFM01");
-        const hasIALFurtherCashIn = previousCashIns.includes("YFM01");
-        const hasIASPureCashIn = previousCashIns.includes("XPM01");
-        const hasIALPureCashIn = previousCashIns.includes("YPM01");
-        
-        // If no previous cash-ins were entered, warn the user
-        if (previousCashIns.length === 0) {
-          throw new Error(`You have selected ${selectedCashedInUnits.length} previously cashed-in units: ${selectedCashedInUnits.join(", ")}. Please make sure you've entered any previous cash-in codes to unlock these units.`);
-        }
+      if (selectedCashedInUnits.length > 0 && previousCashIns.length === 0) {
+        throw new Error(`You have selected ${selectedCashedInUnits.length} previously cashed-in units: ${selectedCashedInUnits.join(", ")}. Please make sure you've entered any previous cash-in codes to unlock these units.`);
       }
 
       const results = {
@@ -678,9 +667,9 @@ const MathEligibilityCalculator = () => {
                   
                   <div className="flex gap-2 mb-2">
                     <select
-                      className="flex-grow p-2 border border-[#505759] rounded focus:border-[#94E7EA] focus:ring focus:ring-[#94E7EA] focus:ring-opacity-50"
-                      value={newCashIn}
-                      onChange={handleNewCashInChange}
+                      className="flex-grow p-2 border border-[#505759] rounded"
+                      value={cashInSelectValue}
+                      onChange={handleCashInSelectChange}
                     >
                       <option value="">Select previous cash-in code...</option>
                       {qualifications.map(qual => (
@@ -694,7 +683,7 @@ const MathEligibilityCalculator = () => {
                       ))}
                     </select>
                     <button
-                      className="px-3 py-2 bg-[#94E7EA] text-[#000000] rounded hover:bg-[#7DD8DB] transition-colors duration-200"
+                      className="px-3 py-2 bg-[#94E7EA] text-[#000000] rounded hover:bg-[#7DD8DB]"
                       onClick={addPreviousCashIn}
                     >
                       Add
@@ -728,7 +717,7 @@ const MathEligibilityCalculator = () => {
                 
                 <div className="flex justify-end mt-4">
                   <button
-                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
+                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700]"
                     onClick={() => setStep(2)}
                     disabled={!targetQualification}
                   >
