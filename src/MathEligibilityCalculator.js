@@ -101,30 +101,6 @@ const mathsCriteria = {
   }
 };
 
-// Availability data based on the table in the image
-const unitAvailability = {
-  "WME01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WME02": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WME03": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
-  "WST01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WST02": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WST03": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
-  "WFM01": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
-  "WFM02": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
-  "WFM03": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
-  "WMA11": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WMA12": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WMA13": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WMA14": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "WDM11": { oct2024: "No", jan2025: "Yes", jun2025: "Yes" },
-  "XMA01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "XFM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "XPM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "YMA01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "YFM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" },
-  "YPM01": { oct2024: "Yes", jan2025: "Yes", jun2025: "Yes" }
-};
-
 const MathEligibilityCalculator = () => {
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [cashedInUnits, setCashedInUnits] = useState([]);
@@ -138,7 +114,7 @@ const MathEligibilityCalculator = () => {
     further: true,
     applied: true
   });
-  const [viewMode, setViewMode] = useState("normal"); // normal or availability
+  const [previousCashIns, setPreviousCashIns] = useState([]);
   
   const handleUnitToggle = (unitCode) => {
     setSelectedUnits(prev => {
@@ -162,6 +138,17 @@ const MathEligibilityCalculator = () => {
     setResult(null);
   };
 
+  const handlePreviousCashInChange = (e) => {
+    const value = e.target.value;
+    if (value && !previousCashIns.includes(value)) {
+      setPreviousCashIns([...previousCashIns, value]);
+    }
+  };
+
+  const removePreviousCashIn = (code) => {
+    setPreviousCashIns(previousCashIns.filter(c => c !== code));
+  };
+
   const checkEligibility = () => {
     try {
       setError(null);
@@ -174,10 +161,22 @@ const MathEligibilityCalculator = () => {
         throw new Error("Please confirm that you've reviewed the eligibility rules before proceeding");
       }
 
-      // Check if user is selecting cashed-in units
+      // Check if user is selecting cashed-in units without relevant previous cash-ins
       const selectedCashedInUnits = selectedUnits.filter(unit => cashedInUnits.includes(unit));
+      
       if (selectedCashedInUnits.length > 0) {
-        throw new Error(`The following units have been previously cashed in: ${selectedCashedInUnits.join(", ")}. These may not be eligible for reuse.`);
+        // Check if previous cash-ins were entered for relevant qualification types
+        const hasIASMathsCashIn = previousCashIns.includes("XMA01");
+        const hasIALMathsCashIn = previousCashIns.includes("YMA01");
+        const hasIASFurtherCashIn = previousCashIns.includes("XFM01");
+        const hasIALFurtherCashIn = previousCashIns.includes("YFM01");
+        const hasIASPureCashIn = previousCashIns.includes("XPM01");
+        const hasIALPureCashIn = previousCashIns.includes("YPM01");
+        
+        // If no previous cash-ins were entered, warn the user
+        if (previousCashIns.length === 0) {
+          throw new Error(`You have selected ${selectedCashedInUnits.length} previously cashed-in units: ${selectedCashedInUnits.join(", ")}. Please make sure you've entered any previous cash-in codes to unlock these units.`);
+        }
       }
 
       const results = {
@@ -446,13 +445,6 @@ const MathEligibilityCalculator = () => {
                   <th className="pb-1 w-16">Select</th>
                   <th className="pb-1">Unit</th>
                   <th className="pb-1">Exam Code</th>
-                  {viewMode === "availability" && (
-                    <>
-                      <th className="pb-1 text-center">Oct 2024</th>
-                      <th className="pb-1 text-center">Jan 2025</th>
-                      <th className="pb-1 text-center">Jun 2025</th>
-                    </>
-                  )}
                   <th className="pb-1 w-24">Previously Used</th>
                 </tr>
               </thead>
@@ -473,17 +465,16 @@ const MathEligibilityCalculator = () => {
                         htmlFor={unit.code}
                         className={`text-sm ${cashedInUnits.includes(unit.code) ? 'text-[#FF4D4F] font-medium' : 'text-[#000000] font-medium'}`}
                       >
+                  <option value="">Select a qualification...</option>
+                  {qualifications.map(qual => (
+                    <option key={qual.id} value={qual.id}>
+                      {qual.name} ({qual.code}) - {qual.description}
+                    </option>
+                  ))}
                         {unit.code} - {unit.name}
                       </label>
                     </td>
                     <td className="text-sm">{unit.examCode}</td>
-                    {viewMode === "availability" && unitAvailability[unit.examCode] && (
-                      <>
-                        <td className="text-center text-sm">{unitAvailability[unit.examCode].oct2024}</td>
-                        <td className="text-center text-sm">{unitAvailability[unit.examCode].jan2025}</td>
-                        <td className="text-center text-sm">{unitAvailability[unit.examCode].jun2025}</td>
-                      </>
-                    )}
                     <td>
                       <input
                         type="checkbox"
@@ -499,7 +490,7 @@ const MathEligibilityCalculator = () => {
             </table>
             {cashedInUnits.some(code => units.some(unit => unit.code === code)) && (
               <div className="text-xs text-[#FF4D4F] mt-2 italic">
-                * Highlighted units have been previously used and may not be eligible for reuse.
+                * Highlighted units have been previously used. You must enter the previous cash-in code to unlock these units.
               </div>
             )}
           </div>
@@ -612,14 +603,8 @@ const MathEligibilityCalculator = () => {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="font-semibold">New Feature:</span>
+              <span className="font-semibold">Important:</span>
               <span className="ml-1">Unit codes from the official specification have been added to help with exam entry.</span>
-              <button 
-                className="ml-auto px-2 py-1 bg-[#FFBB1C] text-xs rounded text-[#000000] hover:bg-[#FFD700]"
-                onClick={() => setViewMode(viewMode === "normal" ? "availability" : "normal")}
-              >
-                {viewMode === "normal" ? "Show Exam Availability" : "Hide Exam Availability"}
-              </button>
             </div>
           </Alert>
 
@@ -637,7 +622,7 @@ const MathEligibilityCalculator = () => {
                 />
               </svg>
               <span className="font-semibold">Important: </span>
-              <span className="ml-1">Units that have been previously used (cashed in) for other qualifications may not be eligible for reuse. Please verify your unit selection carefully.</span>
+              <span className="ml-1">Units that have been previously used (cashed in) for other qualifications need to be unlocked by entering the previous cash-in code.</span>
             </div>
           </Alert>
 
@@ -673,177 +658,3 @@ const MathEligibilityCalculator = () => {
                   value={targetQualification}
                   onChange={(e) => setTargetQualification(e.target.value)}
                 >
-                  <option value="">Select a qualification...</option>
-                  {qualifications.map(qual => (
-                    <option key={qual.id} value={qual.id}>
-                      {qual.name} ({qual.code}) - {qual.description}
-                    </option>
-                  ))}
-                </select>
-                
-                {targetQualification && renderQualificationDetails()}
-                
-                <div className="flex justify-end mt-4">
-                  <button
-                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
-                    onClick={() => setStep(2)}
-                    disabled={!targetQualification}
-                  >
-                    Next: Select Units
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2 - Select units */}
-          {step === 2 && (
-            <div className="mb-6">
-              <div className="flex items-center mb-4">
-                <button
-                  className="mr-2 bg-[#94E7EA] p-1 rounded"
-                  onClick={() => setStep(1)}
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <h3 className="text-lg font-semibold text-[#000000]">
-                  Step 2: Select your completed units
-                </h3>
-              </div>
-              
-              <p className="mb-4 text-[#505759]">
-                Check all units you have completed or plan to complete. Mark any units that have been previously used (cashed in) for other qualifications.
-              </p>
-
-              <div className="space-y-2">
-                {renderQualificationDetails()}
-                
-                {targetQualification && (
-                  <>
-                    {renderUnitsSection("pure", getRelevantUnits().pure)}
-                    {renderUnitsSection("further", getRelevantUnits().further)}
-                    {renderUnitsSection("applied", getRelevantUnits().applied)}
-                  </>
-                )}
-              </div>
-
-              <div className="mt-6 bg-[#DFE1E1] p-4 rounded-lg">
-                <div className="flex items-start mb-4">
-                  <input
-                    type="checkbox"
-                    id="selfCheckConfirmation"
-                    className="mt-1 w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-                    checked={selfCheckConfirmed}
-                    onChange={(e) => setSelfCheckConfirmed(e.target.checked)}
-                  />
-                  <label htmlFor="selfCheckConfirmation" className="ml-2 text-sm text-[#000000]">
-                    I confirm that I have reviewed the IAL Mathematics eligibility rules and verified that my selected units meet the criteria. I understand that units previously cashed in for other qualifications may not be eligible for reuse.
-                  </label>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
-                    onClick={checkEligibility}
-                  >
-                    Check Eligibility
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Results display */}
-          {result && (
-            <div className="mt-6 space-y-4">
-              {result.eligible.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">You are eligible for:</h4>
-                  <div className="p-4 bg-[#8DC63F] border border-[#8DC63F] rounded-lg text-[#000000]">
-                    <ul className="list-disc pl-5">
-                      {result.eligible.map((qualification, index) => (
-                        <li key={index} className="font-medium">
-                          {qualification.name} ({qualification.code})
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
-              {result.missing.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Missing requirements for:</h4>
-                  {result.missing.map((item, index) => (
-                    <div
-                      key={index}
-                      className="p-4 bg-[#FF757A] border border-[#FF757A] rounded-lg text-[#000000] mb-3"
-                    >
-                      <h5 className="font-semibold">{item.qualification} ({item.code})</h5>
-                      <p className="mt-1">Missing: {Array.isArray(item.requirements) ? item.requirements.join(", ") : item.requirements}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              <button
-                className="px-6 py-2 bg-[#505759] text-white rounded-lg hover:bg-[#333] transition-colors duration-200 font-semibold"
-                onClick={() => {
-                  setStep(1);
-                  setResult(null);
-                  setSelectedUnits([]);
-                  setTargetQualification("");
-                }}
-              >
-                Start Over
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="text-center text-sm mt-6 p-4 bg-[#FFFFFF] rounded-lg border border-[#505759]">
-          <p className="text-[#505759] mb-2">
-            Need more information about IAL Mathematics eligibility?
-          </p>
-          <a
-            href="https://qualifications.pearson.com/en/qualifications/edexcel-international-advanced-levels/mathematics-2018.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center text-[#003057] hover:text-[#FFBB1C] font-semibold gap-1"
-          >
-            View full eligibility rules on Pearson Support
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              />
-            </svg>
-          </a>
-          <div className="text-[#FF4D4F] font-medium mt-3 p-2 border border-[#FF4D4F] rounded-lg">
-            <p className="mb-1">⚠️ Important Disclaimer:</p>
-            <p className="text-xs">
-              Units that have been previously used (cashed in) for other qualifications may not be eligible for reuse. 
-              Please consult with your exam officer or examination board for final confirmation of eligibility.
-            </p>
-          </div>
-          <p className="text-[#505759] mt-3 text-xs">
-            This calculator is a guide only. Please refer to the official
-            documentation for complete eligibility requirements.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default MathEligibilityCalculator;
