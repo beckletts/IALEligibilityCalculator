@@ -115,6 +115,7 @@ const MathEligibilityCalculator = () => {
     applied: true
   });
   const [previousCashIns, setPreviousCashIns] = useState([]);
+  const [newCashIn, setNewCashIn] = useState("");
   
   const handleUnitToggle = (unitCode) => {
     setSelectedUnits(prev => {
@@ -138,10 +139,14 @@ const MathEligibilityCalculator = () => {
     setResult(null);
   };
 
-  const handlePreviousCashInChange = (e) => {
-    const value = e.target.value;
-    if (value && !previousCashIns.includes(value)) {
-      setPreviousCashIns([...previousCashIns, value]);
+  const handleNewCashInChange = (e) => {
+    setNewCashIn(e.target.value);
+  };
+
+  const addPreviousCashIn = () => {
+    if (newCashIn && !previousCashIns.includes(newCashIn)) {
+      setPreviousCashIns([...previousCashIns, newCashIn]);
+      setNewCashIn("");
     }
   };
 
@@ -465,12 +470,6 @@ const MathEligibilityCalculator = () => {
                         htmlFor={unit.code}
                         className={`text-sm ${cashedInUnits.includes(unit.code) ? 'text-[#FF4D4F] font-medium' : 'text-[#000000] font-medium'}`}
                       >
-                  <option value="">Select a qualification...</option>
-                  {qualifications.map(qual => (
-                    <option key={qual.id} value={qual.id}>
-                      {qual.name} ({qual.code}) - {qual.description}
-                    </option>
-                  ))}
                         {unit.code} - {unit.name}
                       </label>
                     </td>
@@ -653,8 +652,86 @@ const MathEligibilityCalculator = () => {
               </h3>
               
               <div className="bg-[#DFE1E1] p-4 rounded-lg">
-                <select
-                  className="w-full p-2 border border-[#505759] rounded focus:border-[#94E7EA] focus:ring focus:ring-[#94E7EA] focus:ring-opacity-50"
-                  value={targetQualification}
-                  onChange={(e) => setTargetQualification(e.target.value)}
-                >
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Select a qualification to check:</label>
+                  <select
+                    className="w-full p-2 border border-[#505759] rounded focus:border-[#94E7EA] focus:ring focus:ring-[#94E7EA] focus:ring-opacity-50"
+                    value={targetQualification}
+                    onChange={(e) => setTargetQualification(e.target.value)}
+                  >
+                    <option value="">Select a qualification...</option>
+                    {qualifications.map(qual => (
+                      <option key={qual.id} value={qual.id}>
+                        {qual.name} ({qual.code}) - {qual.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Previous cash-ins section */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Previously cashed-in qualifications:</label>
+                  <p className="text-xs text-[#505759] mb-2">
+                    If you have previously cashed in any mathematics qualifications and want to reuse those units,
+                    please add the cash-in codes below to unlock them.
+                  </p>
+                  
+                  <div className="flex gap-2 mb-2">
+                    <select
+                      className="flex-grow p-2 border border-[#505759] rounded focus:border-[#94E7EA] focus:ring focus:ring-[#94E7EA] focus:ring-opacity-50"
+                      value={newCashIn}
+                      onChange={handleNewCashInChange}
+                    >
+                      <option value="">Select previous cash-in code...</option>
+                      {qualifications.map(qual => (
+                        <option 
+                          key={qual.code} 
+                          value={qual.code}
+                          disabled={previousCashIns.includes(qual.code)}
+                        >
+                          {qual.code} - {qual.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="px-3 py-2 bg-[#94E7EA] text-[#000000] rounded hover:bg-[#7DD8DB] transition-colors duration-200"
+                      onClick={addPreviousCashIn}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  
+                  {previousCashIns.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {previousCashIns.map(code => (
+                        <div key={code} className="flex items-center bg-[#E1F5F5] px-2 py-1 rounded text-sm">
+                          <span>{code}</span>
+                          <button
+                            className="ml-2 text-[#FF4D4F]"
+                            onClick={() => removePreviousCashIn(code)}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {previousCashIns.length > 0 && (
+                    <div className="text-xs text-[#8DC63F] mt-1">
+                      Units from these qualifications will be unlocked for reuse
+                    </div>
+                  )}
+                </div>
+                
+                {targetQualification && renderQualificationDetails()}
+                
+                <div className="flex justify-end mt-4">
+                  <button
+                    className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700] transition-colors duration-200 font-semibold"
+                    onClick={() => setStep(2)}
+                    disabled={!targetQualification}
+                  >
+                    Next: Select Units
+                  </button>
+                </div>
