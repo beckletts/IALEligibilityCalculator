@@ -683,7 +683,7 @@ const MathEligibilityCalculator = () => {
                       ))}
                     </select>
                     <button
-                      className="px-3 py-2 bg-[#94E7EA] text-[#000000] rounded hover:bg-[#7DD8DB]"
+                      className="px-3 py-2 bg-[#94E7EA] text-[#000000] rounded"
                       onClick={addPreviousCashIn}
                     >
                       Add
