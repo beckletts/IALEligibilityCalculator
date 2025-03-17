@@ -706,12 +706,11 @@ const MathEligibilityCalculator = () => {
                     </div>
                   )}
                   
-                  {previousCashIns.length > 0 && (
-                    <div className="text-xs text-[#8DC63F] mt-1">
-                      Units from these qualifications will be unlocked for reuse
-                    </div>
-                  )}
-                </div>
+                 {previousCashIns.length > 0 && (
+  <div className="text-xs text-[#FF4D4F] mt-1">
+    Units from these qualifications will be unlocked for reuse
+  </div>
+)}
                 
                 {targetQualification && renderQualificationDetails()}
                 
