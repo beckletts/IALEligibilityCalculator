@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import Alert from './Alert';
+import AdditionalQualificationSection from './AdditionalQualificationSection';
 
 // Mathematics units data
 const mathsUnits = {
@@ -24,10 +26,10 @@ const mathsUnits = {
   ]
 };
 
-const MathematicsDualQualificationCalculator = () => {
+const MathEligibilityCalculator = () => {
   const [selectedUnits, setSelectedUnits] = useState([]);
   const [cashedInUnits, setCashedInUnits] = useState([]);
-  const [dualQualificationMode, setDualQualificationMode] = useState(false);
+  const [showUncashReminder, setShowUncashReminder] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
@@ -49,10 +51,21 @@ const MathematicsDualQualificationCalculator = () => {
 
   const handleCashedInToggle = (unitCode) => {
     setCashedInUnits(prev => {
-      if (prev.includes(unitCode)) {
-        return prev.filter(code => code !== unitCode);
-      } else {
+      // If toggling on (adding to cashed-in list)
+      if (!prev.includes(unitCode)) {
+        // Check if the unit is a P1-P4 or FP unit
+        const isPure = mathsUnits.pure.some(unit => unit.code === unitCode);
+        const isFurtherPure = mathsUnits.further.some(unit => unit.code === unitCode);
+        
+        // Show reminder if toggling on a pure or further pure unit
+        if ((isPure || isFurtherPure) && !showUncashReminder) {
+          setShowUncashReminder(true);
+        }
+        
         return [...prev, unitCode];
+      } else {
+        // Toggling off (removing from cashed-in list)
+        return prev.filter(code => code !== unitCode);
       }
     });
     setResult(null);
@@ -65,7 +78,7 @@ const MathematicsDualQualificationCalculator = () => {
     }));
   };
 
-  const checkDualQualificationEligibility = () => {
+  const checkEligibility = () => {
     try {
       setError(null);
       
@@ -73,110 +86,142 @@ const MathematicsDualQualificationCalculator = () => {
         throw new Error("Please select at least one unit");
       }
 
-      // Check for minimum required units (12 total for both qualifications)
-      if (selectedUnits.length < 12) {
-        throw new Error(`You need at least 12 units for both qualifications. Currently selected: ${selectedUnits.length}`);
-      }
-
-      // Check requirements for Mathematics
-      const mathsCore = ["P1", "P2", "P3", "P4"];
-      const hasMathsCore = mathsCore.every(unit => selectedUnits.includes(unit));
+      // Check for Mathematics - 6 units required
+      const isMathsEligible = checkMathsEligibility();
       
-      // Check for a valid math pair
-      const mathsPairs = [
-        ["S1", "S2"],
-        ["M1", "M2"],
-        ["S1", "M1"],
-        ["S1", "D1"],
-        ["M1", "D1"]
-      ];
+      // Check for Further Mathematics - 6 units required
+      const isFurtherMathsEligible = checkFurtherMathsEligibility();
       
-      const hasValidMathsPair = mathsPairs.some(pair => 
-        pair.every(unit => selectedUnits.includes(unit))
-      );
+      // Check for IAS Further Mathematics - 3 units required
+      const isIASFurtherMathsEligible = checkIASFurtherMathsEligibility();
 
-      // Mathematics requirements fulfilled?
-      const mathsRequirementsMet = hasMathsCore && hasValidMathsPair;
-
-      // Check requirements for Further Mathematics
-      const hasFP1 = selectedUnits.includes("FP1");
-      const hasFP2orFP3 = selectedUnits.includes("FP2") || selectedUnits.includes("FP3");
-      
-      // Further maths requires 6 units excluding P1-P4
-      const furtherMathsUnits = selectedUnits.filter(unit => 
-        !mathsCore.includes(unit)
-      );
-      
-      const hasEnoughFurtherUnits = furtherMathsUnits.length >= 6;
-
-      // Further Mathematics requirements fulfilled?
-      const furtherMathsRequirementsMet = hasFP1 && hasFP2orFP3 && hasEnoughFurtherUnits;
-
-      // Units must be separate for each qualification
-      const furtherMathsUnitsCounted = furtherMathsUnits.length;
-      
-      // Check if we have enough units for both qualifications (no overlap allowed)
-      const hasEnoughUniqueUnits = selectedUnits.length >= (mathsCore.length + furtherMathsUnitsCounted);
-
-      let results = {
-        mathsEligible: mathsRequirementsMet,
-        furtherMathsEligible: furtherMathsRequirementsMet,
-        dualEligible: mathsRequirementsMet && furtherMathsRequirementsMet && hasEnoughUniqueUnits,
-        mathsMissing: [],
-        furtherMathsMissing: [],
-        allocation: { maths: [], furtherMaths: [] }
-      };
-
-      // Determine what's missing for Mathematics
-      if (!hasMathsCore) {
-        results.mathsMissing.push(
-          ...mathsCore.filter(unit => !selectedUnits.includes(unit))
-        );
-      }
-      
-      if (!hasValidMathsPair) {
-        results.mathsMissing.push("A valid pair from: S1+S2, M1+M2, S1+M1, S1+D1, or M1+D1");
-      }
-
-      // Determine what's missing for Further Mathematics
-      if (!hasFP1) {
-        results.furtherMathsMissing.push("FP1");
-      }
-      
-      if (!hasFP2orFP3) {
-        results.furtherMathsMissing.push("Either FP2 or FP3");
-      }
-      
-      if (!hasEnoughFurtherUnits) {
-        results.furtherMathsMissing.push(`Need 6 units excluding P1-P4 (currently have ${furtherMathsUnitsCounted})`);
-      }
-
-      // If eligible for both, suggest unit allocation
-      if (results.dualEligible) {
-        // Allocate core units to Mathematics
-        results.allocation.maths = [...mathsCore];
-        
-        // Identify a valid pair for Mathematics
-        let allocatedPair = [];
-        for (const pair of mathsPairs) {
-          if (pair.every(unit => selectedUnits.includes(unit))) {
-            allocatedPair = pair;
-            break;
-          }
-        }
-        
-        results.allocation.maths.push(...allocatedPair);
-        
-        // The rest go to Further Mathematics
-        const mathsAllocated = new Set([...mathsCore, ...allocatedPair]);
-        results.allocation.furtherMaths = selectedUnits.filter(unit => !mathsAllocated.has(unit));
-      }
-
-      setResult(results);
+      setResult({
+        maths: isMathsEligible,
+        furtherMaths: isFurtherMathsEligible,
+        iasFurtherMaths: isIASFurtherMathsEligible,
+        selectedUnits: [...selectedUnits],
+        cashedInUnits: [...cashedInUnits]
+      });
     } catch (err) {
       setError(err.message);
       setResult(null);
     }
+  };
+
+  const checkMathsEligibility = () => {
+    // P1, P2, P3, P4 are required
+    const p1to4 = ["P1", "P2", "P3", "P4"];
+    const hasAllPure = p1to4.every(unit => selectedUnits.includes(unit));
+    
+    // Need one of these pairs: S1+S2, M1+M2, S1+M1, S1+D1, M1+D1
+    const validPairs = [
+      ["S1", "S2"],
+      ["M1", "M2"],
+      ["S1", "M1"],
+      ["S1", "D1"],
+      ["M1", "D1"]
+    ];
+    
+    const hasValidPair = validPairs.some(pair => 
+      pair.every(unit => selectedUnits.includes(unit))
+    );
+
+    // Check for cashed in units that would prevent eligibility
+    const hasConflictingCashedIn = p1to4.some(unit => 
+      cashedInUnits.includes(unit)
+    );
+
+    if (!hasAllPure) {
+      return { eligible: false, message: "Missing one or more required Pure Mathematics units (P1-P4)" };
+    }
+    
+    if (!hasValidPair) {
+      return { eligible: false, message: "Missing a valid applied pair" };
+    }
+    
+    if (hasConflictingCashedIn) {
+      return { 
+        eligible: true, 
+        warning: "Some required units are already cashed in. You may need to request these to be uncashed."
+      };
+    }
+    
+    return { eligible: true };
+  };
+
+  const checkFurtherMathsEligibility = () => {
+    // Must have FP1
+    const hasFP1 = selectedUnits.includes("FP1");
+    
+    // Must have at least one of FP2 or FP3
+    const hasFP2orFP3 = selectedUnits.includes("FP2") || selectedUnits.includes("FP3");
+    
+    // Need 6 units total, excluding P1-P4
+    const pureCoreUnits = ["P1", "P2", "P3", "P4"];
+    const furtherMathsUnits = selectedUnits.filter(unit => !pureCoreUnits.includes(unit));
+    const hasEnoughUnits = furtherMathsUnits.length >= 6;
+    
+    // Check for cashed in further pure units that would prevent eligibility
+    const hasConflictingCashedIn = ["FP1", "FP2", "FP3"].some(unit => 
+      cashedInUnits.includes(unit)
+    );
+
+    if (!hasFP1) {
+      return { eligible: false, message: "FP1 is required" };
+    }
+    
+    if (!hasFP2orFP3) {
+      return { eligible: false, message: "At least one of FP2 or FP3 is required" };
+    }
+    
+    if (!hasEnoughUnits) {
+      return { 
+        eligible: false, 
+        message: `Need 6 units for Further Maths (excluding P1-P4). Currently have ${furtherMathsUnits.length}.`
+      };
+    }
+    
+    if (hasConflictingCashedIn) {
+      return { 
+        eligible: true, 
+        warning: "Some required further pure units are already cashed in and may need to be uncashed."
+      };
+    }
+    
+    return { eligible: true };
+  };
+
+  const checkIASFurtherMathsEligibility = () => {
+    // Must have FP1
+    const hasFP1 = selectedUnits.includes("FP1");
+    
+    // Need 3 units total, excluding P1-P4
+    const pureCoreUnits = ["P1", "P2", "P3", "P4"];
+    const furtherMathsUnits = selectedUnits.filter(unit => !pureCoreUnits.includes(unit));
+    const hasEnoughUnits = furtherMathsUnits.length >= 3;
+    
+    // Check for cashed in units that would prevent eligibility
+    const hasConflictingCashedIn = cashedInUnits.includes("FP1");
+
+    if (!hasFP1) {
+      return { eligible: false, message: "FP1 is required" };
+    }
+    
+    if (!hasEnoughUnits) {
+      return { 
+        eligible: false, 
+        message: `Need 3 units for IAS Further Maths (excluding P1-P4). Currently have ${furtherMathsUnits.length}.`
+      };
+    }
+    
+    if (hasConflictingCashedIn) {
+      return { 
+        eligible: true, 
+        warning: "FP1 is already cashed in and may need to be uncashed."
+      };
+    }
+    
+    return { eligible: true };
   };
 
   const renderUnitsSection = (sectionName, units) => {
@@ -212,9 +257,7 @@ const MathematicsDualQualificationCalculator = () => {
               </thead>
               <tbody>
                 {units.map((unit) => (
-                  <tr key={unit.code} className={`border-b border-[#C5C7C7] ${cashedInUnits.includes(unit.code) ? 'bg-[#FFE7E7]' : 
-                                                  result?.allocation?.maths?.includes(unit.code) ? 'bg-[#E0F7FA]' :
-                                                  result?.allocation?.furtherMaths?.includes(unit.code) ? 'bg-[#E8F5E9]' : ''}`}>
+                  <tr key={unit.code} className={`border-b border-[#C5C7C7] ${cashedInUnits.includes(unit.code) ? 'bg-[#FFE7E7]' : ''}`}>
                     <td className="py-2">
                       <input
                         type="checkbox"
@@ -246,14 +289,6 @@ const MathematicsDualQualificationCalculator = () => {
                 ))}
               </tbody>
             </table>
-            
-            {result && (result.allocation.maths.some(code => units.some(unit => unit.code === code)) || 
-                         result.allocation.furtherMaths.some(code => units.some(unit => unit.code === code))) && (
-              <div className="text-xs mt-2">
-                <span className="inline-block w-3 h-3 bg-[#E0F7FA] mr-1"></span> Mathematics qualification
-                <span className="inline-block w-3 h-3 bg-[#E8F5E9] mx-1 ml-3"></span> Further Mathematics qualification
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -262,59 +297,34 @@ const MathematicsDualQualificationCalculator = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-2xl font-bold mb-4">Mathematics Dual Qualification Calculator</h2>
+      <h2 className="text-2xl font-bold mb-4">Mathematics Eligibility Calculator</h2>
       
-      <div className="bg-[#F0F8FF] p-4 rounded-lg mb-6">
-        <div className="flex items-center mb-2">
-          <input 
-            type="checkbox" 
-            id="dualMode"
-            checked={dualQualificationMode}
-            onChange={() => setDualQualificationMode(!dualQualificationMode)}
-            className="w-4 h-4 text-[#FFBB1C] border-[#505759] rounded focus:ring-[#FFBB1C]"
-          />
-          <label htmlFor="dualMode" className="ml-2 font-semibold">
-            Dual Qualification Mode (IAL Mathematics + IAL Further Mathematics)
-          </label>
-        </div>
-        
-        <p className="text-sm text-[#505759]">
-          Enable this mode to check eligibility for both Mathematics (YMA01) and Further Mathematics (YFM01) qualifications simultaneously.
-          Remember that units used for one qualification cannot be reused for the other.
-        </p>
-      </div>
-
-      {dualQualificationMode && (
-        <div className="bg-[#E8F5E9] p-4 rounded-lg mb-6">
-          <h3 className="font-semibold mb-2">Dual Qualification Requirements</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border-l-4 border-[#94E7EA] pl-3">
-              <h4 className="font-medium">IAL Mathematics (YMA01):</h4>
-              <ul className="list-disc pl-5 text-sm">
-                <li>P1, P2, P3, and P4 (Pure Mathematics)</li>
-                <li>One of these pairs:
-                  <ul className="list-circle pl-4 text-xs">
-                    <li>S1 and S2</li>
-                    <li>M1 and M2</li>
-                    <li>S1 and M1</li>
-                    <li>S1 and D1</li>
-                    <li>M1 and D1</li>
-                  </ul>
-                </li>
-              </ul>
-            </div>
-            <div className="border-l-4 border-[#8BC34A] pl-3">
-              <h4 className="font-medium">IAL Further Mathematics (YFM01):</h4>
-              <ul className="list-disc pl-5 text-sm">
-                <li>FP1 (Further Pure Mathematics)</li>
-                <li>At least one of FP2 or FP3</li>
-                <li>Four more units (cannot include P1-P4)</li>
-                <li>Units must not overlap with IAL Mathematics</li>
-              </ul>
+      {showUncashReminder && (
+        <Alert variant="warning">
+          <div className="flex items-start">
+            <svg className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <h4 className="font-semibold">Important Reminder About Cashed In Units</h4>
+              <p className="text-sm mt-1">
+                You have marked units as previously used (cashed in). Remember that you need to uncash these units 
+                if you want to use them in a new IAL qualification. Your examination officer can help with the uncashing process.
+              </p>
+              <a 
+                href="https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/Teaching-and-Learning-Materials/aggregation-rules-and-guidance.pdf" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#D48806] hover:underline text-sm mt-2 inline-block"
+              >
+                View the aggregation guidance document for more information
+              </a>
             </div>
           </div>
-        </div>
+        </Alert>
       )}
+      
+      <AdditionalQualificationSection />
 
       {error && (
         <div className="border-l-4 p-4 mb-4 rounded-r-lg bg-[#FFEBEE] border-[#FF5252] text-[#C62828]">
@@ -335,7 +345,7 @@ const MathematicsDualQualificationCalculator = () => {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-4 mt-6">
         {renderUnitsSection("pure", mathsUnits.pure)}
         {renderUnitsSection("further", mathsUnits.further)}
         {renderUnitsSection("applied", mathsUnits.applied)}
@@ -344,10 +354,9 @@ const MathematicsDualQualificationCalculator = () => {
       <div className="mt-6">
         <button
           className="px-6 py-2 bg-[#FFBB1C] text-[#000000] rounded-lg hover:bg-[#FFD700]"
-          onClick={dualQualificationMode ? checkDualQualificationEligibility : null}
-          disabled={!dualQualificationMode}
+          onClick={checkEligibility}
         >
-          Check Dual Qualification Eligibility
+          Check Eligibility
         </button>
       </div>
 
@@ -355,85 +364,155 @@ const MathematicsDualQualificationCalculator = () => {
         <div className="mt-6 space-y-4">
           <h3 className="font-semibold text-lg">Results:</h3>
           
-          <div className={`p-4 rounded-lg ${result.mathsEligible ? 'bg-[#E0F7FA]' : 'bg-[#FFEBEE]'}`}>
+          <div className={`p-4 rounded-lg ${result.maths.eligible ? 'bg-[#E0F7FA]' : 'bg-[#FFEBEE]'}`}>
             <h4 className="font-medium">IAL Mathematics (YMA01):</h4>
-            {result.mathsEligible ? (
-              <p className="text-[#007C89] font-medium">Eligible for Mathematics qualification</p>
+            {result.maths.eligible ? (
+              <div>
+                <p className="text-[#007C89] font-medium">Eligible for Mathematics qualification</p>
+                {result.maths.warning && (
+                  <div className="mt-2 flex items-start">
+                    <svg className="h-4 w-4 mr-1 mt-0.5 text-[#D48806]" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-[#D48806]">{result.maths.warning}</p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div>
                 <p className="text-[#C62828] font-medium">Not eligible for Mathematics qualification</p>
-                <p className="text-sm mt-1">Missing: {result.mathsMissing.join(", ")}</p>
+                <p className="text-sm mt-1">{result.maths.message}</p>
               </div>
             )}
           </div>
           
-          <div className={`p-4 rounded-lg ${result.furtherMathsEligible ? 'bg-[#E8F5E9]' : 'bg-[#FFEBEE]'}`}>
+          <div className={`p-4 rounded-lg ${result.furtherMaths.eligible ? 'bg-[#E8F5E9]' : 'bg-[#FFEBEE]'}`}>
             <h4 className="font-medium">IAL Further Mathematics (YFM01):</h4>
-            {result.furtherMathsEligible ? (
-              <p className="text-[#2E7D32] font-medium">Eligible for Further Mathematics qualification</p>
+            {result.furtherMaths.eligible ? (
+              <div>
+                <p className="text-[#2E7D32] font-medium">Eligible for Further Mathematics qualification</p>
+                {result.furtherMaths.warning && (
+                  <div className="mt-2 flex items-start">
+                    <svg className="h-4 w-4 mr-1 mt-0.5 text-[#D48806]" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-[#D48806]">{result.furtherMaths.warning}</p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div>
                 <p className="text-[#C62828] font-medium">Not eligible for Further Mathematics qualification</p>
-                <p className="text-sm mt-1">Missing: {result.furtherMathsMissing.join(", ")}</p>
+                <p className="text-sm mt-1">{result.furtherMaths.message}</p>
+              </div>
+            )}
+          </div>
+
+          <div className={`p-4 rounded-lg ${result.iasFurtherMaths.eligible ? 'bg-[#FFF8E1]' : 'bg-[#FFEBEE]'}`}>
+            <h4 className="font-medium">IAS Further Mathematics (International AS):</h4>
+            {result.iasFurtherMaths.eligible ? (
+              <div>
+                <p className="text-[#F57F17] font-medium">Eligible for IAS Further Mathematics qualification</p>
+                {result.iasFurtherMaths.warning && (
+                  <div className="mt-2 flex items-start">
+                    <svg className="h-4 w-4 mr-1 mt-0.5 text-[#D48806]" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-[#D48806]">{result.iasFurtherMaths.warning}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <p className="text-[#C62828] font-medium">Not eligible for IAS Further Mathematics qualification</p>
+                <p className="text-sm mt-1">{result.iasFurtherMaths.message}</p>
               </div>
             )}
           </div>
           
-          <div className={`p-4 rounded-lg ${result.dualEligible ? 'bg-[#FFF8E1]' : 'bg-[#FFEBEE]'}`}>
-            <h4 className="font-medium">Dual Qualification:</h4>
-            {result.dualEligible ? (
-              <div>
-                <p className="text-[#F57F17] font-medium">Eligible for both qualifications!</p>
-                <div className="mt-2 p-3 bg-white rounded border border-[#DFE1E1]">
-                  <p className="font-medium mb-2">Recommended unit allocation:</p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h5 className="text-sm font-medium">Mathematics (YMA01):</h5>
-                      <ul className="list-disc pl-5 text-sm">
-                        {result.allocation.maths.map((unit, index) => (
-                          <li key={index}>{unit}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    
-                    <div>
-                      <h5 className="text-sm font-medium">Further Mathematics (YFM01):</h5>
-                      <ul className="list-disc pl-5 text-sm">
-                        {result.allocation.furtherMaths.map((unit, index) => (
-                          <li key={index}>{unit}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
+          {(result.maths.eligible && result.iasFurtherMaths.eligible) && (
+            <div className="p-4 rounded-lg bg-[#E3F2FD] border border-[#42A5F5]">
+              <h4 className="font-medium">IAL Mathematics + IAS Further Mathematics Combination:</h4>
+              <p className="text-[#1565C0] mt-1">
+                You are eligible for both IAL Mathematics and IAS Further Mathematics qualifications!
+              </p>
+              <div className="mt-2 text-sm">
+                <p className="font-medium">Important reminders:</p>
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  <li>Ensure that units used for one qualification are not used for the other</li>
+                  <li>If any units are already cashed in, they will need to be uncashed</li>
+                  <li>Speak to your examination officer about the uncashing and reaggregation process</li>
+                </ul>
               </div>
-            ) : (
-              <div>
-                <p className="text-[#C62828] font-medium">Not eligible for both qualifications</p>
-                {(!result.mathsEligible || !result.furtherMathsEligible) && (
-                  <p className="text-sm mt-1">Please check the individual qualification requirements above.</p>
-                )}
-                {(result.mathsEligible && result.furtherMathsEligible && !result.dualEligible) && (
-                  <p className="text-sm mt-1">You need 12 unique units with no overlap between qualifications.</p>
-                )}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
       
-      <div className="mt-6 text-sm text-[#505759]">
-        <p className="mb-2 font-medium">Important notes:</p>
-        <ul className="list-disc pl-5">
-          <li>Units used for one qualification cannot be used for another qualification.</li>
-          <li>You need at least 12 unique units in total for both qualifications.</li>
-          <li>Highlighted colors show which units are allocated to which qualification.</li>
-          <li>This calculator is for guidance only. Please confirm with your exam officer.</li>
-        </ul>
+      <div className="mt-8 p-4 bg-[#F5F5F5] rounded-lg">
+        <h3 className="font-semibold">Additional Resources and Guidance</h3>
+        <div className="mt-3 space-y-3">
+          <div className="flex items-start">
+            <svg className="h-5 w-5 mr-2 text-[#007D7F]" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <a 
+                href="https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/Mathematics/2018/Teaching-and-Learning-Materials/aggregation-rules-and-guidance.pdf" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-medium hover:underline text-[#007D7F]"
+              >
+                IAL Mathematics Aggregation Rules and Guidance
+              </a>
+              <p className="text-sm text-[#505759] mt-1">
+                Comprehensive guide to understanding unit aggregation and qualification rules
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start">
+            <svg className="h-5 w-5 mr-2 text-[#007D7F]" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <a 
+                href="https://qualifications.pearson.com/en/support/support-topics/exams/special-requirements/transfer-of-credit.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-medium hover:underline text-[#007D7F]"
+              >
+                Transfer of Credit Information
+              </a>
+              <p className="text-sm text-[#505759] mt-1">
+                Information on transferring credits from other examination boards
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start">
+            <svg className="h-5 w-5 mr-2 text-[#007D7F]" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <a 
+                href="https://qualifications.pearson.com/en/qualifications/edexcel-international-advanced-levels/mathematics-2018.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="font-medium hover:underline text-[#007D7F]"
+              >
+                Edexcel IAL Mathematics Qualification Page
+              </a>
+              <p className="text-sm text-[#505759] mt-1">
+                Official qualification information, specifications, and resources
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default MathematicsDualQualificationCalculator;
+export default MathEligibilityCalculator;
